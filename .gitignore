@@ -3,5 +3,6 @@
 __pycache__
 
 local.py
+arg_mng.py
 
 *.pdf
