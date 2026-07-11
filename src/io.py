@@ -5,6 +5,7 @@ import h5py
 import numpy as np
 
 from configuration import arg_mng as args
+from configuration.general import FIG_NAMES
 
 def clusteredEEG_loader(event):
 
@@ -112,7 +113,7 @@ def handle_figure(fig, fig_name):
 
     if args.SAVE:
 
-        fig.savefig(args.MAIN_DIR + r"figures\supplementary\\" + args.FIG_NAMES[fig_name] + "." + args.FORMAT, dpi = args.dpi)
+        fig.savefig(args.MAIN_DIR + r"figures\\" + FIG_NAMES[fig_name] + "." + args.FORMAT, dpi = args.dpi)
 
     if args.SHOW:
 

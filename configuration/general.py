@@ -47,3 +47,22 @@ time_params = {
     'start_time': -0.4,
     'end_time': 0.8
 }
+
+FIG_NAMES = {
+
+    'main-02': 'main\\fig02_power_ctrl_all_trials',
+    'main-03': 'main\\fig03_dpli_ctrl_all_trials',
+    'main-04': 'main\\fig04_dpli_ctrl_vs_dep_across_all_trials',
+    'main-05': 'main\\fig05_power_both_groups_early_late_trials',
+    'main-06': 'main\\fig06_dpli_both_groups_early_late_trials',
+  
+    'supp-02': 'supplementary\\figs02_both_groups_erp_all_trials', 
+    'supp-03': 'supplementary\\figs03_power_dep_all_trials', 
+    'supp-04': 'supplementary\\figs04_dpli_dep_all_trials', 
+    'supp-05': 'supplementary\\figs05_dpli_ctrl_all_trials_put_top_down_bottom_up', 
+    'supp-06': 'supplementary\\figs06_dpli_dep_all_trials_put_top_down_bottom_up', 
+    'supp-07': 'supplementary\\figs07_dpli_both_groups_early_vs_late_trials', 
+    'supp-08': 'supplementary\\figs08_dpli_both_groups_early_late_trials_stimulus_onset',
+    'supp-09': 'supplementary\\figs09_dpli_vs_learning_rate_correlation_all_ctrl_dep',
+
+}
