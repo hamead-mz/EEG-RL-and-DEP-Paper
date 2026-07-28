@@ -6,3 +6,8 @@ local.py
 arg_mng.py
 
 *.pdf
+
+aux_exp
+
+reproduce_dpli.py
+reproduce_list.py
