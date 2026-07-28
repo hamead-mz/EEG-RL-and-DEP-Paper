@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
 from scipy.stats import zscore, ttest_ind
+from statsmodels.stats.multitest import multipletests
 
 from src.plotting import confidence_bounds_generator, wavelet_freqs_ret
 from src.utils import grp_index_gen, time_vector_generator_with_overlap
@@ -181,10 +182,43 @@ def generate_figure(data, config,
     ax.axvline(data['lor_time'][times_toP[0]], color = 'r')
     ax.axvline(data['lor_time'][times_toP[1]], color = 'r')
 
+    # ----------------------------------------------------------
+    # Benjamini-Hochberg correction (6 tests)
+    # ----------------------------------------------------------
+
+    tests = []
+
+    for event in ["stimulus", "reward", "punishment"]:
+
+        for time_i in times_toP:
+
+            p = ttest_ind(
+                np.array(data["dplis"]["CTRL"][event])[:, time_i, 0, 1],
+                np.array(data["dplis"]["DEP"][event])[:, time_i, 0, 1],
+            ).pvalue
+
+            tests.append((event, time_i, p))
+
+    raw_p = [x[2] for x in tests]
+
+    _, p_corr, _, _ = multipletests(
+        raw_p,
+        alpha=0.05,
+        method="fdr_bh",
+    )
+
+    corrected_p = {
+        (event, time_i): p
+        for (event, time_i, _), p in zip(tests, p_corr)
+    }
+
+    ###########################################################
+
     for ti, time_i in enumerate(times_toP):
 
-            pValue = ttest_ind(np.array(data['dplis']['CTRL']['reward'])[:, time_i, 0, 1], np.array(data['dplis']['DEP']['reward'])[:, time_i, 0, 1]).pvalue
+            # pValue = ttest_ind(np.array(data['dplis']['CTRL']['reward'])[:, time_i, 0, 1], np.array(data['dplis']['DEP']['reward'])[:, time_i, 0, 1]).pvalue
 
+            pValue = corrected_p[("reward", time_i)]
             print(pValue)
 
             if pValue < 0.1:
@@ -211,14 +245,14 @@ def generate_figure(data, config,
 
     for ti, time_i in enumerate(times_toP):
 
-            pValue = ttest_ind(np.array(data['dplis']['CTRL']['punishment'])[:, time_i, 0, 1], np.array(data['dplis']['DEP']['punishment'])[:, time_i, 0, 1]).pvalue
+            # pValue = ttest_ind(np.array(data['dplis']['CTRL']['punishment'])[:, time_i, 0, 1], np.array(data['dplis']['DEP']['punishment'])[:, time_i, 0, 1]).pvalue
 
+            pValue = corrected_p[("punishment", time_i)]
             print(pValue)
 
             if pValue < 0.1:
                 
                 ax.text(data['lor_time'][time_i], fig2Ytexts[ti], f'p = {np.round(pValue, 3)}', bbox = props, ha = 'center', fontsize = 9)
-
 
     axs2[0].set_title('Stimulus')
     axs2[1].set_title('Reward')

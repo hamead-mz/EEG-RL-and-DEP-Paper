@@ -8,6 +8,8 @@ from data2plot.dpli_data import extract_dpli_data
 
 from configuration.local import directories
 from configuration.general import names
+from src.multiple_tests import correct_pvalues
+from configuration.arg_mng import CORRECTION
 
 from src.io import handle_figure
 
@@ -22,7 +24,7 @@ def generate_figure(data, config):
 
     subfigs = fig.subfigures(1, 2, width_ratios = config['subfigure_args']['width_ratios'], wspace = config['subfigure_args']['wspace'])
 
-    WeMat = np.array([[population_to_edge(np.array(dPLI)[:, TimeSample, :, :]) for TimeSample in range(11)] for dPLI in data['all_dplis']])
+    WeMat = np.array([[population_to_edge(np.array(dPLI)[:, TimeSample, :, :], correction=CORRECTION) for TimeSample in range(11)] for dPLI in data['all_dplis']])
     # WeMat = np.array([[population_to_edge(dPLI[IND_2D, TimeSample, :, :]) for TimeSample in range(11)] for dPLI in data['AlldPLIs']])
 
     ####### Box Plots Section ########
@@ -46,12 +48,45 @@ def generate_figure(data, config):
                 whiskerprops=dict(color='black'),
                 capprops=dict(color='black'))
 
-        for di, data_ in enumerate(Data2Box):
+        # for di, data_ in enumerate(Data2Box):
 
-            pV = ttest_1samp(data_, 0.5).pvalue
-            ax.text(di + 1, 1.1, significance_label_generator(pV * (2 * config['boxplot_args']['correct_it'] + 1)), ha = 'center', va = 'center', fontsize = 7)
-            ax.plot([di + 1 - config['boxplot_args']['ddi'], di + 1 + config['boxplot_args']['ddi']], [1.01, 1.01], lw = 0.5, color = 'k')
+        #     pV = ttest_1samp(data_, 0.5).pvalue
+        #     ax.text(di + 1, 1.1, significance_label_generator(pV * (2 * config['boxplot_args']['correct_it'] + 1)), ha = 'center', va = 'center', fontsize = 7)
+        #     ax.plot([di + 1 - config['boxplot_args']['ddi'], di + 1 + config['boxplot_args']['ddi']], [1.01, 1.01], lw = 0.5, color = 'k')
 
+        # ---------- Multiple-comparison correction ----------
+
+        raw_p = [
+            ttest_1samp(data_, 0.5).pvalue
+            for data_ in Data2Box
+        ]
+
+        corrected_p = correct_pvalues(
+            raw_p,
+            method=CORRECTION,
+        )
+
+        for di, pV in enumerate(corrected_p):
+
+            ax.text(
+                di + 1,
+                1.1,
+                significance_label_generator(pV),
+                ha='center',
+                va='center',
+                fontsize=7
+            )
+
+            ax.plot(
+                [
+                    di + 1 - config['boxplot_args']['ddi'],
+                    di + 1 + config['boxplot_args']['ddi']
+                ],
+                [1.01, 1.01],
+                lw=0.5,
+                color='k'
+            )
+        
         ax.set_ylim([-0.05, 1.2])
 
         for direction in names['directions']:

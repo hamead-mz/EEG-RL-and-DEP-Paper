@@ -8,6 +8,10 @@ from data2plot.power_data import extract_broad_power_data, extract_theta_power_d
 from src.utils import available_subjects, load_experiment_data, grp_index_gen
 from src.io import handle_figure
 
+
+from src.multiple_tests import correct_pvalues
+from configuration.arg_mng import CORRECTION
+
 from configuration.general import names, time_params
 
 ## Power in Section A is Normalized!
@@ -15,7 +19,7 @@ from configuration.general import names, time_params
 
 def generate_figure(data, config, fs = 500, 
                     start_time = time_params['start_time'],
-                      end_time = time_params['start_time'], 
+                      end_time = time_params['end_time'], 
                       tAB = (300, 450), 
                       k = 100):
 
@@ -118,12 +122,30 @@ def generate_figure(data, config, fs = 500,
 
     ax.set_ylabel('Power ($\mu^2$)')
 
-    DataP = np.mean(np.array(data['theta_band_power'][1])[:, tA : tB], axis = 1)
-    DataR = np.mean(np.array(data['theta_band_power'][2])[:, tA : tB], axis = 1)
+    # DataP = np.mean(np.array(data['theta_band_power'][1])[:, tA : tB], axis = 1)
+    # DataR = np.mean(np.array(data['theta_band_power'][2])[:, tA : tB], axis = 1)
 
-    p = ttest_rel(DataP, DataR).pvalue
+    # p = ttest_rel(DataP, DataR).pvalue
 
-    p_value_text = p_value_text_gen(p)
+    # p_value_text = p_value_text_gen(p)
+
+    DataS = np.mean(np.array(data['theta_band_power'][0])[:, tA:tB], axis=1)
+    DataP = np.mean(np.array(data['theta_band_power'][1])[:, tA:tB], axis=1)
+    DataR = np.mean(np.array(data['theta_band_power'][2])[:, tA:tB], axis=1)
+
+    raw_p = [
+        ttest_rel(DataS, DataP).pvalue,
+        ttest_rel(DataS, DataR).pvalue,
+        ttest_rel(DataP, DataR).pvalue,
+    ]
+
+    corrected_p = correct_pvalues(
+        raw_p,
+        method=CORRECTION,
+    )
+
+    # Reward vs Punishment
+    p_value_text = p_value_text_gen(max(corrected_p))
 
     props = dict(boxstyle='round', facecolor='wheat', alpha = 0.5)
     ax.text(0.55, 0.9, p_value_text, ha = 'center', va = 'center', bbox = props, transform=ax.transAxes)

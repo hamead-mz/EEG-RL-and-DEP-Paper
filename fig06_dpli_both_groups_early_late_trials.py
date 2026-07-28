@@ -7,12 +7,15 @@ from src.utils import time_vector_generator_with_overlap
 from data2plot.dpli_data import extract_early_late_ctrl_dep_dpli_data
 from configuration.general import names
 
+from src.multiple_tests import correct_pvalues
+from configuration.arg_mng import CORRECTION
+
 from src.io import handle_figure
 
 def generate_figure(data, config,
                     CoLe = 1,
                     alpha = 0.4,
-                    ConThr = 0.03,
+                    ConThr = 0.05,
                     times_toP = [4, 5, 6],
                     fig2Ytexts = [0.7, 0.3, 0.7]
                     ):
@@ -28,9 +31,87 @@ def generate_figure(data, config,
                             dpi = config['figure_args']['dpi'], 
                             sharex = True, sharey = True)
     
-    for event_num, event_key in enumerate(['reward', 'punishment']):
+    # for event_num, event_key in enumerate(['reward', 'punishment']):
          
-         for trial_stage in range(2):
+    #      for trial_stage in range(2):
+
+    #         ctrl_dpli = data['dpli'][event_key]['CTRL'][:, trial_stage, :]
+    #         dep_dpli = data['dpli'][event_key]['DEP'][:, trial_stage, :]
+
+    #         ax = axs[trial_stage, event_num]
+
+    #         for group_num, dpli_data in enumerate([ctrl_dpli, dep_dpli]):
+
+    #             Data2Plot = dpli_data
+    #             ax.plot(config['lor_time'], np.mean(Data2Plot, axis = 0), 
+    #                     color = config['color_curves'][trial_stage][group_num], label = config['group_labels'][group_num])
+    #             y_L, y_U = confidence_bounds_generator(Data2Plot, confidence_level = CoLe)
+    #             ax.fill_between(config['lor_time'], y_L, y_U, alpha = alpha, color = config['color_curves'][trial_stage][group_num])
+
+    #         ax.autoscale(axis = 'x', tight = True)
+    #         ax.axvline(0, ls = '--', color = 'k')
+    #         ax.axhline(0.5, ls = ':', color = 'r')
+    #         ax.axvline(config['lor_time'][4], color = 'r')
+    #         ax.axvline(config['lor_time'][5], color = 'r')
+
+    #         ER_ps = []
+
+    #         for ti, time_i in enumerate(times_toP):
+
+    #                 pValue = ttest_ind(ctrl_dpli[:, time_i], dep_dpli[:, time_i]).pvalue
+    #                 ER_ps.append(pValue)
+
+    #                 print(pValue)
+
+    #                 if pValue < ConThr:
+                        
+    #                     ax.text(config['lor_time'][time_i], fig2Ytexts[ti], f'p = {np.round(pValue, 3)}', bbox = props, ha = 'center', fontsize = 9)
+
+    #                     if time_i > 5:
+                            
+    #                         ax.axvline(config['lor_time'][time_i], color = 'g', ls = '--')
+
+    # ----------------------------------------------------------
+    # Compute all 12 p-values
+    # ----------------------------------------------------------
+
+    tests = []
+
+    for event_num, event_key in enumerate(['reward', 'punishment']):
+
+        for trial_stage in range(2):
+
+            ctrl_dpli = data['dpli'][event_key]['CTRL'][:, trial_stage, :]
+            dep_dpli = data['dpli'][event_key]['DEP'][:, trial_stage, :]
+
+            for time_i in times_toP:
+
+                p = ttest_ind(
+                    ctrl_dpli[:, time_i],
+                    dep_dpli[:, time_i]
+                ).pvalue
+
+                tests.append((event_num, trial_stage, time_i, p))
+
+    raw_p = [x[3] for x in tests]
+
+    corrected_p = correct_pvalues(
+        raw_p,
+        method=CORRECTION,
+    )
+
+    p_dict = {
+        (event_num, trial_stage, time_i): p
+        for (event_num, trial_stage, time_i, _), p in zip(tests, corrected_p)
+    }
+
+    # ----------------------------------------------------------
+    # Plot
+    # ----------------------------------------------------------
+
+    for event_num, event_key in enumerate(['reward', 'punishment']):
+
+        for trial_stage in range(2):
 
             ctrl_dpli = data['dpli'][event_key]['CTRL'][:, trial_stage, :]
             dep_dpli = data['dpli'][event_key]['DEP'][:, trial_stage, :]
@@ -40,33 +121,57 @@ def generate_figure(data, config,
             for group_num, dpli_data in enumerate([ctrl_dpli, dep_dpli]):
 
                 Data2Plot = dpli_data
-                ax.plot(config['lor_time'], np.mean(Data2Plot, axis = 0), 
-                        color = config['color_curves'][trial_stage][group_num], label = config['group_labels'][group_num])
-                y_L, y_U = confidence_bounds_generator(Data2Plot, confidence_level = CoLe)
-                ax.fill_between(config['lor_time'], y_L, y_U, alpha = alpha, color = config['color_curves'][trial_stage][group_num])
 
-            ax.autoscale(axis = 'x', tight = True)
-            ax.axvline(0, ls = '--', color = 'k')
-            ax.axhline(0.5, ls = ':', color = 'r')
-            ax.axvline(config['lor_time'][4], color = 'r')
-            ax.axvline(config['lor_time'][5], color = 'r')
+                ax.plot(
+                    config['lor_time'],
+                    np.mean(Data2Plot, axis=0),
+                    color=config['color_curves'][trial_stage][group_num],
+                    label=config['group_labels'][group_num]
+                )
 
-            ER_ps = []
+                y_L, y_U = confidence_bounds_generator(
+                    Data2Plot,
+                    confidence_level=CoLe
+                )
+
+                ax.fill_between(
+                    config['lor_time'],
+                    y_L,
+                    y_U,
+                    alpha=alpha,
+                    color=config['color_curves'][trial_stage][group_num]
+                )
+
+            ax.autoscale(axis='x', tight=True)
+            ax.axvline(0, ls='--', color='k')
+            ax.axhline(0.5, ls=':', color='r')
+            ax.axvline(config['lor_time'][4], color='r')
+            ax.axvline(config['lor_time'][5], color='r')
 
             for ti, time_i in enumerate(times_toP):
 
-                    pValue = ttest_ind(ctrl_dpli[:, time_i], dep_dpli[:, time_i]).pvalue
-                    ER_ps.append(pValue)
+                pValue = p_dict[(event_num, trial_stage, time_i)]
 
-                    print(pValue)
+                print(pValue)
 
-                    if pValue < ConThr:
-                        
-                        ax.text(config['lor_time'][time_i], fig2Ytexts[ti], f'p = {np.round(pValue, 3)}', bbox = props, ha = 'center', fontsize = 9)
+                if pValue < ConThr:
 
-                        if time_i > 5:
-                            
-                            ax.axvline(config['lor_time'][time_i], color = 'g', ls = '--')
+                    ax.text(
+                        config['lor_time'][time_i],
+                        fig2Ytexts[ti],
+                        f"p = {pValue:.3f}",
+                        bbox=props,
+                        ha='center',
+                        fontsize=9,
+                    )
+
+                    if time_i > 5:
+
+                        ax.axvline(
+                            config['lor_time'][time_i],
+                            color='g',
+                            ls='--'
+                        )
                             
     axs[0, 0].set_ylabel('Early Trials')
     axs[1, 0].set_ylabel('Late Trials')

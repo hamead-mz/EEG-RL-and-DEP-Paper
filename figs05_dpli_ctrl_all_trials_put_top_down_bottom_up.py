@@ -7,6 +7,9 @@ from data2plot.dpli_data import extract_dpli_data
 from src.io import handle_figure
 from configuration.general import names
 
+from src.multiple_tests import correct_pvalues
+from configuration.arg_mng import CORRECTION
+
 def generate_figure(data, config):
 
     plt.style.use('seaborn-v0_8-paper')
@@ -28,42 +31,145 @@ def generate_figure(data, config):
 
     for CPi, ConnPair in enumerate(ConnsPairs):
 
+        # for Pi in range(3):
+
+        #     ax = axs1[Pi, CPi]
+        #     dPLI = np.array(data['all_dplis'][Pi])
+        #     Data2Box = [dPLI[:, 4, ConnPair[0], ConnPair[1]],
+        #                 dPLI[:, 5, ConnPair[0], ConnPair[1]],
+        #                 dPLI[:, 6, ConnPair[0], ConnPair[1]]]
+
+        #     bxp = ax.boxplot(Data2Box, patch_artist=True,
+        #             boxprops=dict(facecolor = config['boxplot_args']['box_colors'][Pi], edgecolor='black'),
+        #             medianprops=dict(color='orange'),
+        #             whiskerprops=dict(color='black'),
+        #             capprops=dict(color='black'))
+
+        #     for di, data_ in enumerate(Data2Box):
+
+        #         pV = ttest_1samp(data_, 0.5).pvalue
+        #         ax.text(di + 1, 1.1, significance_label_generator(pV * (2 * config['boxplot_args']['correct_it'] + 1)), ha = 'center', va = 'center', fontsize = 7)
+        #         ax.plot([di + 1 - config['boxplot_args']['ddi'], di + 1 + config['boxplot_args']['ddi']], [1.01, 1.01], lw = 0.5, color = 'k')
+
+        #     ax.set_ylim([-0.05, 1.2])
+
+        #     for direction in names['directions']:
+
+        #             ax.spines[direction].set_linewidth(0.3)
+
+        #     ax.spines['top'].set_visible(False)
+        #     ax.spines['right'].set_visible(False)
+
+        #     if CPi == 0:
+                
+        #         ax.set_ylabel(config['event_labels'][Pi])
+
+        #     if Pi == 2:
+                
+        #         ax.set_xticks([1, 2, 3], config['time_labels'][:3], rotation = 20, fontsize = 6)
+
+        # ----------------------------------------------------------
+        # Collect p-values for this connection (3 events × 3 windows)
+        # ----------------------------------------------------------
+
+        tests = []
+
         for Pi in range(3):
 
-            ax = axs1[Pi, CPi]
             dPLI = np.array(data['all_dplis'][Pi])
-            Data2Box = [dPLI[:, 4, ConnPair[0], ConnPair[1]],
-                        dPLI[:, 5, ConnPair[0], ConnPair[1]],
-                        dPLI[:, 6, ConnPair[0], ConnPair[1]]]
 
-            bxp = ax.boxplot(Data2Box, patch_artist=True,
-                    boxprops=dict(facecolor = config['boxplot_args']['box_colors'][Pi], edgecolor='black'),
-                    medianprops=dict(color='orange'),
-                    whiskerprops=dict(color='black'),
-                    capprops=dict(color='black'))
+            Data2Box = [
+                dPLI[:, 4, ConnPair[0], ConnPair[1]],
+                dPLI[:, 5, ConnPair[0], ConnPair[1]],
+                dPLI[:, 6, ConnPair[0], ConnPair[1]],
+            ]
 
             for di, data_ in enumerate(Data2Box):
 
-                pV = ttest_1samp(data_, 0.5).pvalue
-                ax.text(di + 1, 1.1, significance_label_generator(pV * (2 * config['boxplot_args']['correct_it'] + 1)), ha = 'center', va = 'center', fontsize = 7)
-                ax.plot([di + 1 - config['boxplot_args']['ddi'], di + 1 + config['boxplot_args']['ddi']], [1.01, 1.01], lw = 0.5, color = 'k')
+                p = ttest_1samp(data_, 0.5).pvalue
+                tests.append((Pi, di, p))
+
+        raw_p = [x[2] for x in tests]
+
+        corrected_p = correct_pvalues(
+            raw_p,
+            method=CORRECTION,
+        )
+
+        p_dict = {
+            (Pi, di): p
+            for (Pi, di, _), p in zip(tests, corrected_p)
+        }
+
+        # ----------------------------------------------------------
+        # Plot
+        # ----------------------------------------------------------
+
+        for Pi in range(3):
+
+            ax = axs1[Pi, CPi]
+
+            dPLI = np.array(data['all_dplis'][Pi])
+
+            Data2Box = [
+                dPLI[:, 4, ConnPair[0], ConnPair[1]],
+                dPLI[:, 5, ConnPair[0], ConnPair[1]],
+                dPLI[:, 6, ConnPair[0], ConnPair[1]],
+            ]
+
+            bxp = ax.boxplot(
+                Data2Box,
+                patch_artist=True,
+                boxprops=dict(
+                    facecolor=config['boxplot_args']['box_colors'][Pi],
+                    edgecolor='black'
+                ),
+                medianprops=dict(color='orange'),
+                whiskerprops=dict(color='black'),
+                capprops=dict(color='black')
+            )
+
+            for di in range(3):
+
+                pV = p_dict[(Pi, di)]
+
+                ax.text(
+                    di + 1,
+                    1.1,
+                    significance_label_generator(pV),
+                    ha='center',
+                    va='center',
+                    fontsize=7,
+                )
+
+                ax.plot(
+                    [
+                        di + 1 - config['boxplot_args']['ddi'],
+                        di + 1 + config['boxplot_args']['ddi']
+                    ],
+                    [1.01, 1.01],
+                    lw=0.5,
+                    color='k'
+                )
 
             ax.set_ylim([-0.05, 1.2])
 
             for direction in names['directions']:
-
-                    ax.spines[direction].set_linewidth(0.3)
+                ax.spines[direction].set_linewidth(0.3)
 
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
 
             if CPi == 0:
-                
                 ax.set_ylabel(config['event_labels'][Pi])
 
             if Pi == 2:
-                
-                ax.set_xticks([1, 2, 3], config['time_labels'][:3], rotation = 20, fontsize = 6)
+                ax.set_xticks(
+                    [1, 2, 3],
+                    config['time_labels'][:3],
+                    rotation=20,
+                    fontsize=6,
+                )
 
     axs1[0, 0].set_title("FPz - Cz", fontsize = 8)
     axs1[0, 1].set_title("FPz - Pz", fontsize = 8)

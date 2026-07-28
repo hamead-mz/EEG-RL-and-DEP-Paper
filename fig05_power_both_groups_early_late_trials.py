@@ -9,6 +9,9 @@ from data2plot.power_data import extract_early_late_ctrl_dep_power_data
 from configuration.general import names
 from src.io import handle_figure
 
+from src.multiple_tests import correct_pvalues
+from configuration.arg_mng import CORRECTION
+
 def generate_figure(data, config, CoLe = 1, alpha = 0.4, time_shades = [250, 375],
                     time_ = np.linspace(-0.4, 0.8, 501), k = 100):
     
@@ -80,25 +83,89 @@ def generate_figure(data, config, CoLe = 1, alpha = 0.4, time_shades = [250, 375
         
         bxp = axs[2 + Di].boxplot([Early_Control, Late_Control, Early_Depressed, Late_Depressed], labels = box_labels, patch_artist=True)
         axs[2 + Di].set_xticklabels(labels, rotation = 30)
-        axs[2 + Di].plot([1, 2], [25, 25], color = 'k')
-        pValue = ttest_rel(Early_Control, Late_Control).pvalue
-        axs[2 + Di].text(1.5, 26, significance_label_generator(pValue), ha = 'center')
-        print(pValue)
+        # axs[2 + Di].plot([1, 2], [25, 25], color = 'k')
+        # pValue = ttest_rel(Early_Control, Late_Control).pvalue
+        # axs[2 + Di].text(1.5, 26, significance_label_generator(pValue), ha = 'center')
+        # print(pValue)
 
-        axs[2 + Di].plot([3, 4], [25, 25], color = 'k')
-        pValue = ttest_rel(Early_Depressed, Late_Depressed).pvalue
-        axs[2 + Di].text(3.5, 26, significance_label_generator(pValue), ha = 'center')
-        print(pValue)
+        # axs[2 + Di].plot([3, 4], [25, 25], color = 'k')
+        # pValue = ttest_rel(Early_Depressed, Late_Depressed).pvalue
+        # axs[2 + Di].text(3.5, 26, significance_label_generator(pValue), ha = 'center')
+        # print(pValue)
 
-        axs[2 + Di].plot([1, 3], [30, 30], color = 'k')
-        pValue = ttest_ind(Early_Control, Early_Depressed).pvalue
-        axs[2 + Di].text(2, 31, significance_label_generator(pValue), ha = 'center')
-        print(pValue)
+        # axs[2 + Di].plot([1, 3], [30, 30], color = 'k')
+        # pValue = ttest_ind(Early_Control, Early_Depressed).pvalue
+        # axs[2 + Di].text(2, 31, significance_label_generator(pValue), ha = 'center')
+        # print(pValue)
 
-        axs[2 + Di].plot([2, 4], [35, 35], color = 'k')
-        pValue = ttest_ind(Late_Control, Late_Depressed).pvalue
-        axs[2 + Di].text(3, 36, significance_label_generator(pValue), ha = 'center')
-        print(pValue)
+        # axs[2 + Di].plot([2, 4], [35, 35], color = 'k')
+        # pValue = ttest_ind(Late_Control, Late_Depressed).pvalue
+        # axs[2 + Di].text(3, 36, significance_label_generator(pValue), ha = 'center')
+        # print(pValue)
+
+        # ------------------------------
+        # Learning effect
+        # ------------------------------
+
+        learning_p = correct_pvalues(
+            [
+                ttest_rel(Early_Control, Late_Control).pvalue,
+                ttest_rel(Early_Depressed, Late_Depressed).pvalue,
+            ],
+            method=CORRECTION,
+        )
+
+        # ------------------------------
+        # Group effect
+        # ------------------------------
+
+        group_p = correct_pvalues(
+            [
+                ttest_ind(Early_Control, Early_Depressed).pvalue,
+                ttest_ind(Late_Control, Late_Depressed).pvalue,
+            ],
+            method=CORRECTION,
+        )
+
+        # CTRL: Early vs Late
+        axs[2 + Di].plot([1, 2], [25, 25], color='k')
+        axs[2 + Di].text(
+            1.5,
+            26,
+            significance_label_generator(learning_p[0]),
+            ha='center'
+        )
+        print(learning_p[0])
+
+        # DEP: Early vs Late
+        axs[2 + Di].plot([3, 4], [25, 25], color='k')
+        axs[2 + Di].text(
+            3.5,
+            26,
+            significance_label_generator(learning_p[1]),
+            ha='center'
+        )
+        print(learning_p[1])
+
+        # Early: CTRL vs DEP
+        axs[2 + Di].plot([1, 3], [30, 30], color='k')
+        axs[2 + Di].text(
+            2,
+            31,
+            significance_label_generator(group_p[0]),
+            ha='center'
+        )
+        print(group_p[0])
+
+        # Late: CTRL vs DEP
+        axs[2 + Di].plot([2, 4], [35, 35], color='k')
+        axs[2 + Di].text(
+            3,
+            36,
+            significance_label_generator(group_p[1]),
+            ha='center'
+        )
+        print(group_p[1])
 
         axs[2 + Di].set_ylim([0, 40])
         axs[2 + Di].spines['top'].set_visible(False)
