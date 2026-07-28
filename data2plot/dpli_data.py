@@ -195,7 +195,9 @@ def extract_dpli_data_groups_across_all_both():
 
 def extract_dplis_across_all_trials_both():
 
-    dpli_data = [calculate_dpli_values_across_all(group = group, channels = [0, 3]) for group in ['CTRL', 'DEP']]
+    from configuration.arg_mng import CHANNEL_PAIR
+
+    dpli_data = [calculate_dpli_values_across_all(group = group, channels = CHANNEL_PAIR) for group in ['CTRL', 'DEP']]
 
     data_dicts = {
 
@@ -234,13 +236,18 @@ def extract_early_late_ctrl_dep_dpli_data(channels = (0, 1)):
     return output_data
 
 def calculate_dpli_values_early_late(group = 'CTRL', 
-                          channels = [0, 3], 
+                          channels = None, 
                           events = ['Stim', 'Pos', 'Neg'], 
                           window_length = 100, 
                           overlap_ratio = 0.5,
                           start_time = -0.4,
                           end_time = 0.8,
                           Fs = 500):
+
+    if channels is None:
+
+        from configuration.arg_mng import CHANNEL_PAIR
+        channels = CHANNEL_PAIR
 
     calculated_connectivity_data = []
 
@@ -287,7 +294,9 @@ def extract_early_late_ctrl_dep_dpli_stimulus_locked_data(channels = (0, 1)):
 
 def extract_dplis_across_all_trials_both_reward_punishment():
 
-    dpli_data = [calculate_dpli_values_across_all(group = group, channels = [0, 3], events=['Pos', 'Neg']) for group in ['CTRL', 'DEP']]
+    from configuration.arg_mng import CHANNEL_PAIR
+
+    dpli_data = [calculate_dpli_values_across_all(group = group, channels = CHANNEL_PAIR, events=['Pos', 'Neg']) for group in ['CTRL', 'DEP']]
 
     data_dicts = {
 
