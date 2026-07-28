@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import ttest_1samp
+from src.multiple_tests import correct_pvalues
 
 class Color_def:
 
@@ -208,44 +209,111 @@ class network_graph:
         ax.set_xlim(xlims)
         ax.set_ylim(ylims)
 
-def population_to_edge(Pop, Threshold = 0.5, UpperBound = -1 * np.log10(0.00001), LowerBound = -1 * np.log10(0.05)):
+# def population_to_edge(Pop, Threshold = 0.5, UpperBound = -1 * np.log10(0.00001), LowerBound = -1 * np.log10(0.05)):
 
-    Pop = np.array(Pop)
+#     Pop = np.array(Pop)
+
+#     _, m, n = Pop.shape
+
+#     EdgeCIMat = np.zeros((m, n))
+
+#     for m_ in range(m):
+
+#         for n_ in range(n):
+
+#             if m_ != n_:
+
+#                 TestPop = Pop[:, m_, n_]
+
+#                 PV = ttest_1samp(TestPop, Threshold, alternative = 'greater').pvalue * 2
+
+#                 TmpVar = -1 * np.log10(PV + 0.000001)
+
+#                 if np.isnan(TmpVar):
+
+#                     print('NaN ALERT ' + str(PV) + ' ' + str(m_) + ' ' + str(n_))
+
+#                 if TmpVar < LowerBound:
+
+#                     EdgeCIMat[m_, n_] = 0
+
+#                 elif TmpVar > UpperBound:
+
+#                     EdgeCIMat[m_, n_] = 1
+
+#                 else:
+
+#                     EdgeCIMat[m_, n_] = TmpVar / UpperBound
+
+#             else:
+
+#                 EdgeCIMat[m_, n_] = 0
+
+#     return EdgeCIMat
+
+def population_to_edge(
+        Pop,
+        Threshold=0.5,
+        UpperBound=-1 * np.log10(0.00001),
+        LowerBound=-1 * np.log10(0.05),
+        correction="none",
+):
+
+    Pop = np.asarray(Pop)
 
     _, m, n = Pop.shape
 
     EdgeCIMat = np.zeros((m, n))
 
+    tests = []
+
+    # -----------------------------
+    # Collect all p-values
+    # -----------------------------
     for m_ in range(m):
 
         for n_ in range(n):
 
-            if m_ != n_:
+            if m_ == n_:
+                continue
 
-                TestPop = Pop[:, m_, n_]
+            TestPop = Pop[:, m_, n_]
 
-                PV = ttest_1samp(TestPop, Threshold, alternative = 'greater').pvalue * 2
+            p = ttest_1samp(
+                TestPop,
+                Threshold,
+                alternative="greater"
+            ).pvalue * 2
 
-                TmpVar = -1 * np.log10(PV + 0.000001)
+            tests.append((m_, n_, p))
 
-                if np.isnan(TmpVar):
+    raw_p = [x[2] for x in tests]
 
-                    print('NaN ALERT ' + str(PV) + ' ' + str(m_) + ' ' + str(n_))
+    corrected_p = correct_pvalues(
+        raw_p,
+        method=correction,
+    )
 
-                if TmpVar < LowerBound:
+    # -----------------------------
+    # Fill EdgeCIMat
+    # -----------------------------
+    for (m_, n_, _), p in zip(tests, corrected_p):
 
-                    EdgeCIMat[m_, n_] = 0
+        TmpVar = -np.log10(p + 1e-6)
 
-                elif TmpVar > UpperBound:
+        if np.isnan(TmpVar):
+            print(f"NaN ALERT {p} {m_} {n_}")
 
-                    EdgeCIMat[m_, n_] = 1
+        if TmpVar < LowerBound:
 
-                else:
+            EdgeCIMat[m_, n_] = 0
 
-                    EdgeCIMat[m_, n_] = TmpVar / UpperBound
+        elif TmpVar > UpperBound:
 
-            else:
+            EdgeCIMat[m_, n_] = 1
 
-                EdgeCIMat[m_, n_] = 0
+        else:
+
+            EdgeCIMat[m_, n_] = TmpVar / UpperBound
 
     return EdgeCIMat
