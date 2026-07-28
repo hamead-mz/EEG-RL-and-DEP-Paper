@@ -7,6 +7,8 @@ names = {
 
 }
 
+inc_channels = [0, 3, 8, 13]
+
 wavelet_params = {
 
         'wavelet': 'morl',
